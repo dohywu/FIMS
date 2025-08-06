@@ -339,7 +339,6 @@ async function getAiRecipeSuggestion(ingredients) {
       body: JSON.stringify({ ingredients }),
     });
 
-    // ✅ 응답이 비었는지 먼저 확인
     const text = await response.text();
     if (!text) {
       throw new Error('서버에서 빈 응답을 받았습니다.');
@@ -353,13 +352,27 @@ async function getAiRecipeSuggestion(ingredients) {
       throw new Error('AI 서버 응답 형식이 잘못되었습니다.');
     }
 
+    // API가 에러 메시지를 반환한 경우
+    if (data.error) {
+      throw new Error(`추천 불가 (사유: ${data.error})`);
+    }
+
+    let suggestion = data.recipe || '';
+    // 여러 줄 또는 여러 요리가 있을 경우 첫 번째만 사용
+    if (suggestion.includes('\n')) {
+      suggestion = suggestion.split('\n').filter(Boolean)[0];
+    }
+    if (suggestion.includes(',')) {
+      suggestion = suggestion.split(',').map((s) => s.trim())[0];
+    }
+
     let infoLine = '';
     if (data.tokens !== undefined && data.remainingFree !== undefined) {
       infoLine = `<div class="text-xs text-gray-500">📊 이번 요청 토큰: ${data.tokens}개 · 남은 무료 요청: ${data.remainingFree}회</div>`;
     }
 
     document.getElementById('recipes').innerHTML =
-      `<div class="mt-2 text-green-700 font-semibold">🤖 AI 추천 요리: ${data.recipe}</div>` +
+      `<div class="mt-2 text-green-700 font-semibold">🤖 AI 추천 요리: ${suggestion}</div>` +
       infoLine +
       document.getElementById('recipes').innerHTML;
   } catch (err) {
