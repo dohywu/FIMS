@@ -53,12 +53,18 @@ export default async function handler(req, res) {
     const data = await response.json();
     console.log('📦 Gemini 응답:', JSON.stringify(data, null, 2));
 
+    if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+      return res.status(200).json({
+        recipe: `추천 불가 (사유: ${data.error?.message || '응답 없음'})`,
+      });
+    }
+
     const suggestion =
-      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '추천 불가';
+      data.candidates[0].content.parts[0].text.trim() || '추천 불가';
 
     res.status(200).json({ recipe: suggestion });
   } catch (err) {
     console.error('❌ Gemini API 호출 오류:', err);
-    res.status(500).json({ error: 'AI 추천 실패' });
+    res.status(500).json({ error: 'AI 추천 실패', details: err.message });
   }
 }
