@@ -1,0 +1,1 @@
+FIMS(Fridge Inventory Management System) is a web-based inventory management system designed to help users efficiently track and organize refrigerated and frozen food items. With a clean and intuitive interface, users can register, view, and update items in real time, reducing both food waste and storage inefficiency.
