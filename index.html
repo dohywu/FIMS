@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>냉장고 재고 & 레시피 추천</title>
+  </head>
+  <body>
+    <h1>🥦 냉장고 재고 관리</h1>
+    <div id="login-section">
+      <button id="login-btn">Google 로그인</button>
+    </div>
+
+    <div id="app" style="display: none">
+      <h2>재료 등록</h2>
+      <input id="name" placeholder="재료 이름" />
+      <input id="qty" type="number" placeholder="수량" />
+      <input id="expiry" type="date" />
+      <button id="add-btn">추가</button>
+
+      <h2>재고 목록</h2>
+      <div id="inventory"></div>
+
+      <h2>레시피 추천</h2>
+      <div id="recipes"></div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
