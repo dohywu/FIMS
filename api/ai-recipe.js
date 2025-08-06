@@ -39,7 +39,7 @@ export default async function handler(req, res) {
             {
               parts: [
                 {
-                  text: `다음 재료로 만들 수 있는 한국 요리 제목 하나만 제안해줘. 다른 설명 없이 제목만 말해. 재료: ${ingredients.join(
+                  text: `다음 재료로 만들 수 있는 한국 요리 제목 5개 이하로 제안해줘. 다른 설명 없이 제목만 말해. 재료: ${ingredients.join(
                     ', '
                   )}`,
                 },
