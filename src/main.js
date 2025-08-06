@@ -1,3 +1,46 @@
+// 🔹 Soon Expiring 표시 함수
+function showSoonExpiring() {
+  const soonDivId = 'soon-expiring';
+  let soonDiv = document.getElementById(soonDivId);
+  if (!soonDiv) {
+    // 섹션이 없으면 inventory 위에 생성
+    soonDiv = document.createElement('div');
+    soonDiv.id = soonDivId;
+    soonDiv.className =
+      'bg-yellow-100 border border-yellow-300 rounded-md p-2 text-xs text-yellow-800 mb-2';
+    const inv = document.getElementById('inventory');
+    inv.parentNode.insertBefore(soonDiv, inv);
+  }
+  soonDiv.innerHTML = '<b>⚠ Soon Expiring</b><br>';
+
+  const today = new Date();
+  const q = query(
+    collection(db, 'users', currentUser.uid, 'ingredients'),
+    orderBy('expiry')
+  );
+  getDocs(q).then((snap) => {
+    let found = false;
+    snap.forEach((docSnap) => {
+      const item = docSnap.data();
+      let expiryDate;
+      if (item.expiry?.toDate) {
+        expiryDate = item.expiry.toDate();
+      } else {
+        expiryDate = new Date(item.expiry);
+      }
+      const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+      if (daysLeft <= 3 && daysLeft >= -3) {
+        soonDiv.innerHTML += `- ${item.name} (${item.qty}) D${
+          daysLeft >= 0 ? '-' + daysLeft : '+' + Math.abs(daysLeft)
+        }<br>`;
+        found = true;
+      }
+    });
+    if (!found) {
+      soonDiv.innerHTML += '<i>None</i>';
+    }
+  });
+}
 /**
  * 🔹 로그인/로그아웃 UI 업데이트 함수
  */
@@ -26,7 +69,7 @@ function updateAuthUI(user) {
     // 로그아웃 상태
     loginSection.innerHTML = `
       <button id="login-btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
-        Google 로그인
+        SIGN IN (Google)
       </button>
     `;
     document.getElementById('login-btn').addEventListener('click', async () => {
@@ -124,6 +167,91 @@ try {
 
 let aiSuggestedOnce = false; // ✅ AI 추천 중복 방지 플래그
 
+// 🔹 Save action history
+async function saveHistory(act, itemId, beforeData, afterData) {
+  if (!currentUser || !currentUser.uid) {
+    console.warn('⚠ No currentUser, history not saved.');
+    return;
+  }
+
+  try {
+    // Firestore는 Timestamp, 함수 등을 직렬화 못 하므로 JSON 변환 처리
+    const cleanBefore = beforeData
+      ? JSON.parse(JSON.stringify(beforeData))
+      : null;
+    const cleanAfter = afterData ? JSON.parse(JSON.stringify(afterData)) : null;
+
+    // qty 변동 정보 생성
+    let qtyChange = undefined;
+    if (
+      cleanBefore &&
+      cleanAfter &&
+      typeof cleanBefore.qty === 'number' &&
+      typeof cleanAfter.qty === 'number' &&
+      cleanBefore.qty !== cleanAfter.qty
+    ) {
+      qtyChange = `(QTY: ${cleanBefore.qty} → ${cleanAfter.qty})`;
+    }
+
+    // Build data object for Firestore
+    const data = {
+      act, // ADD, DEL, EDIT
+      itemId,
+      beforeData: cleanBefore,
+      afterData: cleanAfter,
+      ts: Timestamp.now(),
+      user: currentUser.displayName || currentUser.email || 'ANON',
+    };
+    if (qtyChange !== undefined && qtyChange !== '') {
+      data.qtyChange = qtyChange;
+    }
+
+    const docRef = await addDoc(
+      collection(db, 'users', currentUser.uid, 'ing_history'),
+      data
+    );
+
+    console.log(
+      `✅ History saved to /users/${currentUser.uid}/ing_history/${docRef.id}`,
+      { act, beforeData: cleanBefore, afterData: cleanAfter, qtyChange }
+    );
+
+    // 저장 직후 UI에 반영되도록 호출
+    appendHistoryToUI({
+      ...data,
+      ts: Timestamp.now(), // ensure fresh timestamp
+    });
+  } catch (err) {
+    console.error('❌ History save err:', err);
+  }
+}
+
+// 히스토리 항목을 UI에 즉시 추가하는 함수
+function appendHistoryToUI(h) {
+  const historyDiv = document.getElementById('history');
+  if (!historyDiv) return;
+
+  // 히스토리가 숨겨져 있어도 데이터만 미리 추가
+  const entry = document.createElement('div');
+  entry.className = 'border-b py-2 text-sm';
+  let nameLine = `${h.beforeData?.name || h.afterData?.name || ''}`;
+  if (h.qtyChange) {
+    nameLine += ` <span class="text-blue-600">${h.qtyChange}</span>`;
+  }
+  entry.innerHTML = `
+    <b>[${h.act}]</b> ${nameLine} 
+    (${h.user})<br>
+    <small>${
+      h.ts.toDate
+        ? h.ts.toDate().toLocaleString()
+        : new Date(h.ts.seconds * 1000).toLocaleString()
+    }</small>
+  `;
+
+  // 맨 위에 추가
+  historyDiv.insertBefore(entry, historyDiv.firstChild);
+}
+
 // 🔹 로그인 버튼
 const loginBtn = document.getElementById('login-btn');
 if (loginBtn) {
@@ -150,6 +278,8 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // 🔹 재료 불러오기
+// ⚠ Soon Expiring 실시간 업데이트 반영을 위해 loadIngredients 안에서 onSnapshot 사용 시
+// 기존 soon-expiring 섹션을 항상 초기화하도록 개선
 function loadIngredients() {
   const q = query(
     collection(db, 'users', currentUser.uid, 'ingredients'),
@@ -162,12 +292,28 @@ function loadIngredients() {
     const today = new Date();
     let myIngredients = [];
 
+    // ⚠ Soon Expiring 섹션 초기화 (매 스냅샷 시마다 새로 생성/갱신)
+    let soonExpDiv = document.getElementById('soon-expiring');
+    if (!soonExpDiv) {
+      soonExpDiv = document.createElement('div');
+      soonExpDiv.id = 'soon-expiring';
+      soonExpDiv.className =
+        'bg-yellow-100 border border-yellow-300 rounded-md p-2 text-xs text-yellow-800 mb-2';
+      list.parentNode.insertBefore(soonExpDiv, list);
+    }
+    let soonExpiringItems = [];
+    soonExpDiv.innerHTML = '<b>⚠ Soon Expiring</b><br>'; // 매번 초기화
+
     // ✅ RF/FR 구분용 배열
     let coldItems = [];
     let freezeItems = [];
 
     snapshot.forEach((docSnap) => {
       const item = docSnap.data();
+
+      // 🛠 이미 삭제된 아이템은 건너뛰기 (데이터가 없거나 이름이 없는 경우)
+      if (!item || !item.name) return;
+
       myIngredients.push(item.name);
 
       // ✅ Timestamp 또는 string 모두 처리
@@ -178,6 +324,15 @@ function loadIngredients() {
         expiryDate = new Date(item.expiry);
       }
       const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+
+      // ⚠ 3일 이하 남은 경우 soonExpiringItems에 추가
+      if (daysLeft <= 3) {
+        soonExpiringItems.push(
+          `- ${item.name} (${item.qty}) D${
+            daysLeft >= 0 ? '-' + daysLeft : '+' + Math.abs(daysLeft)
+          }`
+        );
+      }
 
       const itemHTML = `
         <div class="flex items-center justify-between bg-white border p-2 rounded mb-1">
@@ -219,6 +374,14 @@ function loadIngredients() {
       }
     });
 
+    // ⚠ Soon Expiring 표시 (실시간 반영)
+    if (soonExpiringItems.length > 0) {
+      soonExpDiv.innerHTML =
+        '<b>⚠ Soon Expiring</b><br>' + soonExpiringItems.join('<br>');
+    } else {
+      soonExpDiv.innerHTML = '<b>⚠ Soon Expiring</b><br><i>None</i>';
+    }
+
     // ✅ RF/FR 구분 출력
     if (coldItems.length > 0) {
       list.innerHTML +=
@@ -243,7 +406,14 @@ function loadIngredients() {
 // 🔹 storage 변경 처리 함수
 window.changeStorage = async (id, newStorage) => {
   try {
-    await updateDoc(doc(db, 'users', currentUser.uid, 'ingredients', id), {
+    const ingredientRef = doc(db, 'users', currentUser.uid, 'ingredients', id);
+    const beforeSnap = await getDoc(ingredientRef);
+    const beforeData = beforeSnap.data();
+    await updateDoc(ingredientRef, {
+      storage: newStorage,
+    });
+    await saveHistory('EDIT', id, beforeData, {
+      ...beforeData,
       storage: newStorage,
     });
   } catch (err) {
@@ -253,22 +423,29 @@ window.changeStorage = async (id, newStorage) => {
 
 // 🔹 유통기한 수정
 window.editExpiry = async (id, currentDate) => {
-  const newDate = prompt(
-    '새 유통기한을 입력하세요 (YYYY-MM-DD 형식)',
-    currentDate
-  );
+  const newDate = prompt('New Exp (YYYY-MM-DD)', currentDate);
   if (!newDate) return;
   if (isNaN(new Date(newDate))) {
-    alert('올바른 날짜 형식이 아닙니다.');
+    alert('Invalid date.');
     return;
   }
   try {
-    await updateDoc(doc(db, 'users', currentUser.uid, 'ingredients', id), {
+    const ingredientRef = doc(db, 'users', currentUser.uid, 'ingredients', id);
+    const beforeSnap = await getDoc(ingredientRef);
+    const beforeData = beforeSnap.data();
+
+    await updateDoc(ingredientRef, {
       expiry: Timestamp.fromDate(new Date(newDate)),
     });
-    alert('유통기한이 수정되었습니다.');
+
+    await saveHistory('EDIT', id, beforeData, {
+      ...beforeData,
+      expiry: Timestamp.fromDate(new Date(newDate)),
+    });
+
+    alert('Exp updated.');
   } catch (err) {
-    console.error('❌ 유통기한 수정 오류:', err);
+    console.error('❌ Exp edit err:', err);
   }
 };
 
@@ -282,7 +459,17 @@ document.getElementById('add-btn').addEventListener('click', async () => {
     return alert('모든 칸을 채워주세요.');
 
   try {
-    await addDoc(collection(db, 'users', currentUser.uid, 'ingredients'), {
+    const docRef = await addDoc(
+      collection(db, 'users', currentUser.uid, 'ingredients'),
+      {
+        name,
+        qty,
+        expiry: Timestamp.fromDate(new Date(expiry)),
+        storage,
+      }
+    );
+    // Save to history (ADD)
+    await saveHistory('ADD', docRef.id, null, {
       name,
       qty,
       expiry: Timestamp.fromDate(new Date(expiry)),
@@ -303,29 +490,36 @@ window.deleteIngredient = async (id) => {
     const ingredientRef = doc(db, 'users', currentUser.uid, 'ingredients', id);
     const ingredientSnap = await getDoc(ingredientRef);
     if (!ingredientSnap.exists()) {
-      alert('재료를 찾을 수 없습니다.');
+      alert('Item not found.');
       return;
     }
     const data = ingredientSnap.data();
     if (data.qty > 1) {
       let toDelete = prompt(
-        `현재 수량: ${data.qty}\n삭제할 수량 입력 (1 ~ ${data.qty}):`,
+        `QTY: ${data.qty}\nDEL QTY (1 ~ ${data.qty}):`,
         '1'
       );
       if (toDelete === null) return;
       toDelete = parseInt(toDelete, 10);
-      if (isNaN(toDelete) || toDelete < 1)
-        return alert('올바른 수량을 입력하세요.');
+      if (isNaN(toDelete) || toDelete < 1) return alert('Invalid qty.');
       if (toDelete < data.qty) {
         await updateDoc(ingredientRef, { qty: data.qty - toDelete });
+        await saveHistory('DEL', id, data, {
+          ...data,
+          qty: data.qty - toDelete,
+        });
       } else {
+        // Save history BEFORE deletion
+        await saveHistory('DEL', id, data, null);
         await deleteDoc(ingredientRef);
       }
     } else {
+      // Save history BEFORE deletion
+      await saveHistory('DEL', id, data, null);
       await deleteDoc(ingredientRef);
     }
   } catch (err) {
-    console.error('❌ Delete ingredient error:', err);
+    console.error('❌ DEL error:', err);
   }
 };
 
@@ -333,7 +527,12 @@ window.deleteIngredient = async (id) => {
 window.deleteIngredientAll = async (id) => {
   if (!confirm('정말 이 항목을 전부 삭제하시겠습니까?')) return;
   try {
-    await deleteDoc(doc(db, 'users', currentUser.uid, 'ingredients', id));
+    const ingredientRef = doc(db, 'users', currentUser.uid, 'ingredients', id);
+    const beforeSnap = await getDoc(ingredientRef);
+    const beforeData = beforeSnap.data();
+    // Save history BEFORE deletion
+    await saveHistory('DEL', id, beforeData, null);
+    await deleteDoc(ingredientRef);
   } catch (err) {
     console.error('❌ 전체 삭제 error:', err);
   }
@@ -349,7 +548,18 @@ document
 
     for (const checkbox of checkedBoxes) {
       const id = checkbox.dataset.id;
-      await deleteDoc(doc(db, 'users', currentUser.uid, 'ingredients', id));
+      const ingredientRef = doc(
+        db,
+        'users',
+        currentUser.uid,
+        'ingredients',
+        id
+      );
+      const beforeSnap = await getDoc(ingredientRef);
+      const beforeData = beforeSnap.data();
+      // Save history BEFORE deletion
+      await saveHistory('DEL', id, beforeData, null);
+      await deleteDoc(ingredientRef);
     }
   });
 
@@ -360,11 +570,14 @@ document
     if (!confirm('목록 전체를 삭제하시겠습니까?')) return;
     const q = query(collection(db, 'users', currentUser.uid, 'ingredients'));
     const snap = await getDocs(q);
-    snap.forEach(async (docSnap) => {
+    for (const docSnap of snap.docs) {
+      const beforeData = docSnap.data();
+      // Save history BEFORE deletion
+      await saveHistory('DEL', docSnap.id, beforeData, null);
       await deleteDoc(
         doc(db, 'users', currentUser.uid, 'ingredients', docSnap.id)
       );
-    });
+    }
   });
 
 // 🔹 필터 버튼
@@ -469,3 +682,52 @@ async function getAiRecipeSuggestion(ingredients) {
     ).innerHTML += `<div class="text-red-500">AI 추천 실패: ${err.message}</div>`;
   }
 }
+
+// 🔹 Show history
+document
+  .getElementById('show-history-btn')
+  .addEventListener('click', async () => {
+    const historyDiv = document.getElementById('history');
+    historyDiv.innerHTML = '';
+
+    // ✅ display 방식으로 토글
+    if (
+      historyDiv.style.display === 'none' ||
+      historyDiv.style.display === ''
+    ) {
+      historyDiv.style.display = 'block';
+    } else {
+      historyDiv.style.display = 'none';
+      return; // 닫을 때는 데이터 로드 안 함
+    }
+
+    const q = query(
+      collection(db, 'users', currentUser.uid, 'ing_history'),
+      orderBy('ts', 'desc')
+    );
+
+    const snap = await getDocs(q);
+    console.log('📜 History snapshot size:', snap.size);
+
+    if (snap.empty) {
+      historyDiv.innerHTML =
+        '<div class="text-gray-500 py-2">No history available</div>';
+      return;
+    }
+
+    snap.forEach((docSnap) => {
+      const h = docSnap.data();
+      console.log('📜 History doc:', h);
+      let nameLine = `${h.beforeData?.name || h.afterData?.name || ''}`;
+      if (h.qtyChange) {
+        nameLine += ` <span class="text-blue-600">${h.qtyChange}</span>`;
+      }
+      historyDiv.innerHTML += `
+        <div class="border-b py-2 text-sm">
+          <b>[${h.act}]</b> ${nameLine} 
+          (${h.user})<br>
+          <small>${h.ts.toDate().toLocaleString()}</small>
+        </div>
+      `;
+    });
+  });

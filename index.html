@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FIMC</title>
+    <title>FIMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="bg-gray-100 min-h-screen flex flex-col">
     <header
       class="bg-white border-b border-gray-300 px-4 py-2 flex justify-between items-center"
     >
-      <h1 class="text-gray-800 text-lg font-semibold">FIMC</h1>
+      <h1 class="text-gray-800 text-lg font-semibold">FIMS</h1>
     </header>
     <main class="flex-grow flex items-start justify-center p-2">
       <div class="max-w-full w-full space-y-4">
@@ -33,6 +33,12 @@
           style="display: none"
           class="bg-white rounded-md shadow-sm p-4 space-y-4 border border-gray-200"
         >
+          <!-- Soon Expiring (Moved to Top) -->
+
+          <div
+            id="soon-expiring"
+            class="mb-4 bg-red-100 border border-red-400 rounded-md p-2"
+          ></div>
           <!-- 재료 등록 -->
           <h2
             class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
@@ -123,6 +129,20 @@
             </button>
           </div>
 
+          <div class="pt-2">
+            <button
+              id="show-history-btn"
+              class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 text-xs"
+            >
+              SHOW HISTORY
+            </button>
+            <div
+              id="history"
+              style="display: none"
+              class="mt-2 bg-gray-50 border border-gray-200 rounded-md p-2 min-h-[80px] text-gray-700 text-xs overflow-auto max-h-48"
+            ></div>
+          </div>
+
           <!-- 재고 목록 -->
           <h2
             class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
@@ -133,7 +153,6 @@
             id="inventory"
             class="bg-gray-50 border border-gray-200 rounded-md p-2 min-h-[80px] text-gray-700 text-xs"
           ></div>
-
           <!-- 레시피 추천 -->
           <h2
             class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
