@@ -1,3 +1,37 @@
+// 🔹 대량 등록
+document.getElementById('bulk-add-btn').addEventListener('click', async () => {
+  const rawText = document.getElementById('bulk-input').value;
+  if (!rawText.trim()) return alert('구매내역을 붙여넣으세요.');
+
+  const lines = rawText.split('\n');
+  const items = [];
+
+  // [브랜드] 상품명 형태에서 이름 추출
+  lines.forEach((line) => {
+    const match = line.match(/^\[(.*?)\]\s*(.+?)(\s+\d|$)/);
+    if (match) {
+      const name = `${match[1]} ${match[2]}`.trim();
+      items.push(name);
+    }
+  });
+
+  if (items.length === 0) {
+    alert('상품명을 찾을 수 없습니다.');
+    return;
+  }
+
+  for (let name of items) {
+    await addDoc(collection(db, 'users', currentUser.uid, 'ingredients'), {
+      name,
+      qty: 1,
+      expiry: Timestamp.fromDate(new Date('2000-01-01')), // 기본값
+      storage: '냉장', // 기본 저장 방식
+    });
+  }
+
+  alert(`${items.length}개의 상품이 등록되었습니다.`);
+  document.getElementById('bulk-input').value = '';
+});
 console.log('✅ main.js loaded');
 import './style.css';
 import { initializeApp } from 'firebase/app';
@@ -46,6 +80,8 @@ try {
 } catch (error) {
   console.error('❌ Firebase initialization error:', error);
 }
+
+let aiSuggestedOnce = false; // ✅ AI 추천 중복 방지 플래그
 
 // 🔹 로그인 버튼
 const loginBtn = document.getElementById('login-btn');
@@ -114,6 +150,11 @@ function loadIngredients() {
             </span>
           </div>
           <div class="flex gap-2">
+            <button class="bg-blue-500 text-white px-2 py-1 rounded text-xs" onclick="editExpiry('${
+              docSnap.id
+            }', '${
+        expiryDate.toISOString().split('T')[0]
+      }')">유통기한 수정</button>
             <button class="bg-yellow-500 text-white px-2 py-1 rounded text-xs" onclick="deleteIngredient('${
               docSnap.id
             }')">삭제</button>
@@ -125,9 +166,35 @@ function loadIngredients() {
     });
 
     renderRecipes(myIngredients);
-    getAiRecipeSuggestion(myIngredients); // AI 추천 호출
+
+    // ✅ 첫 로드에서만 AI 추천 호출
+    if (!aiSuggestedOnce && myIngredients.length > 0) {
+      aiSuggestedOnce = true;
+      getAiRecipeSuggestion(myIngredients);
+    }
   });
 }
+
+// 🔹 유통기한 수정
+window.editExpiry = async (id, currentDate) => {
+  const newDate = prompt(
+    '새 유통기한을 입력하세요 (YYYY-MM-DD 형식)',
+    currentDate
+  );
+  if (!newDate) return;
+  if (isNaN(new Date(newDate))) {
+    alert('올바른 날짜 형식이 아닙니다.');
+    return;
+  }
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid, 'ingredients', id), {
+      expiry: Timestamp.fromDate(new Date(newDate)),
+    });
+    alert('유통기한이 수정되었습니다.');
+  } catch (err) {
+    console.error('❌ 유통기한 수정 오류:', err);
+  }
+};
 
 // 🔹 재료 추가
 document.getElementById('add-btn').addEventListener('click', async () => {
