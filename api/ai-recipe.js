@@ -29,7 +29,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const prompt = `다음 재료로 만들 수 있는 한국 요리 제목 5개만 제안해줘. 그리고 요리마다 쉼표 넣어주고. 다른 설명 없이 제목만 말해. 재료: ${ingredients.join(
+    const prompt = `다음 재료로 만들 수 있는 한국 요리 제목 5개만 제안해줘. 각 요리는 쉼표(,)로 구분해서 한 줄로만 출력해. 다른 설명 없이 제목만 말해. 재료: ${ingredients.join(
       ', '
     )}`;
     const inputTokens = Math.ceil(prompt.length / 4);
@@ -88,15 +88,28 @@ export default async function handler(req, res) {
       });
     }
 
-    const suggestion = data.candidates[0].content.parts[0].text.trim();
-    const outputTokens = Math.ceil(suggestion.length / 4);
+    const suggestionRaw = data.candidates[0].content.parts[0].text.trim();
+
+    // 줄바꿈, '와', '및' 등을 쉼표로 변환
+    const normalized = suggestionRaw
+      .replace(/\n+/g, ',')
+      .replace(/\s*와\s*/g, ', ')
+      .replace(/\s*및\s*/g, ', ');
+
+    const recipeList = normalized
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 5);
+
+    const outputTokens = Math.ceil(suggestionRaw.length / 4);
     const totalTokens = inputTokens + outputTokens;
 
     requestCount++;
     const remainingFree = Math.max(1500 - requestCount, 0);
 
     return res.status(200).json({
-      recipe: suggestion,
+      recipe: recipeList.join(', '), // 한 줄에 쉼표로 구분
       tokens: totalTokens,
       remainingFree,
     });

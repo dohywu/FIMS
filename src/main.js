@@ -149,16 +149,16 @@ function loadIngredients() {
               </span>
             </span>
           </div>
-          <div class="flex gap-2">
-            <button class="bg-blue-500 text-white px-2 py-1 rounded text-xs" onclick="editExpiry('${
+          <div class="flex flex-wrap gap-2 justify-end">
+            <button class="bg-blue-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="editExpiry('${
               docSnap.id
             }', '${
         expiryDate.toISOString().split('T')[0]
       }')">유통기한 수정</button>
-            <button class="bg-yellow-500 text-white px-2 py-1 rounded text-xs" onclick="deleteIngredient('${
+            <button class="bg-yellow-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="deleteIngredient('${
               docSnap.id
             }')">삭제</button>
-            <button class="bg-red-600 text-white px-2 py-1 rounded text-xs" onclick="deleteIngredientAll('${
+            <button class="bg-red-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="deleteIngredientAll('${
               docSnap.id
             }')">전체삭제</button>
           </div>
@@ -357,24 +357,35 @@ async function getAiRecipeSuggestion(ingredients) {
       throw new Error(`추천 불가 (사유: ${data.error})`);
     }
 
-    let suggestion = data.recipe || '';
-    // 여러 줄 또는 여러 요리가 있을 경우 첫 번째만 사용
-    if (suggestion.includes('\n')) {
-      suggestion = suggestion.split('\n').filter(Boolean)[0];
+    let suggestions = [];
+
+    if (Array.isArray(data.recipe)) {
+      suggestions = data.recipe;
+    } else if (typeof data.recipe === 'string') {
+      // 쉼표 또는 줄바꿈 기준으로 분리
+      suggestions = data.recipe
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
     }
-    if (suggestion.includes(',')) {
-      suggestion = suggestion.split(',').map((s) => s.trim())[0];
-    }
+
+    // 최대 5개까지만 표시
+    suggestions = suggestions.slice(0, 5);
 
     let infoLine = '';
     if (data.tokens !== undefined && data.remainingFree !== undefined) {
       infoLine = `<div class="text-xs text-gray-500">📊 이번 요청 토큰: ${data.tokens}개 · 남은 무료 요청: ${data.remainingFree}회</div>`;
     }
 
+    const suggestionHTML = suggestions
+      .map(
+        (s) =>
+          `<div class="mt-2 text-green-700 font-semibold">🤖 AI 추천 요리: ${s}</div>`
+      )
+      .join('');
+
     document.getElementById('recipes').innerHTML =
-      `<div class="mt-2 text-green-700 font-semibold">🤖 AI 추천 요리: ${suggestion}</div>` +
-      infoLine +
-      document.getElementById('recipes').innerHTML;
+      suggestionHTML + infoLine + document.getElementById('recipes').innerHTML;
   } catch (err) {
     console.error('❌ AI 추천 오류:', err);
     document.getElementById(
