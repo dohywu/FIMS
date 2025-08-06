@@ -108,7 +108,14 @@ document.getElementById('bulk-add-btn').addEventListener('click', async () => {
     await addDoc(collection(db, 'users', currentUser.uid, 'ingredients'), {
       name,
       qty: 1,
-      expiry: Timestamp.fromDate(new Date('2000-01-01')), // 기본값
+      // 기본값: 현재 연도 + 현재 달 + 01
+      expiry: Timestamp.fromDate(
+        new Date(
+          `${new Date().getFullYear()}-${String(
+            new Date().getMonth() + 1
+          ).padStart(2, '0')}-01`
+        )
+      ),
       storage: 'RF', // 기본 저장 방식
     });
   }
@@ -353,7 +360,15 @@ function loadIngredients() {
               }>CC</option>
             </select>
             <span>${item.name} (${item.qty}) -
-              <span class="${daysLeft <= 3 ? 'text-red-500 font-bold' : ''}">
+              <span class="${
+                daysLeft <= 3
+                  ? 'text-red-500 font-bold cursor-pointer underline'
+                  : 'cursor-pointer underline'
+              }"
+                onclick="showDaysLeft('${item.name.replace(
+                  /'/g,
+                  "\\'"
+                )}', ${daysLeft})">
                 D${daysLeft >= 0 ? '-' + daysLeft : '+' + Math.abs(daysLeft)}
               </span>
             </span>
@@ -742,3 +757,11 @@ document
       `;
     });
   });
+
+// 🔹 Show days left popup for D- spans
+window.showDaysLeft = function (name, daysLeft) {
+  // daysLeft 대신 실제 만료일을 계산하여 YYYY-MM-DD 형식으로 표시
+  const today = new Date();
+  const expiryDate = new Date(today.getTime() + daysLeft * 24 * 60 * 60 * 1000);
+  alert(`${name} expires on: ${expiryDate.toISOString().split('T')[0]}`);
+};
