@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { ingredients } = req.body;
+  const { ingredients } = await req.json();
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

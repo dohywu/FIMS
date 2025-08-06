@@ -261,15 +261,23 @@ function renderRecipes(myIngredients) {
   });
 }
 
-// 🔹 AI 요리 추천 (Firebase Functions 호출)
-const aiRecipe = httpsCallable(functions, 'aiRecipeSuggestion');
-
+// 🔹 AI 요리 추천 (Vercel Serverless API 호출)
 async function getAiRecipeSuggestion(ingredients) {
   if (ingredients.length === 0) return;
+
   try {
-    const res = await aiRecipe({ ingredients });
+    const response = await fetch(
+      'https://fims-eight.vercel.app/api/ai-recipe',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients }),
+      }
+    );
+
+    const data = await response.json();
     document.getElementById('recipes').innerHTML =
-      `<div class="mt-2 text-green-700 font-semibold">🤖 AI 추천 요리: ${res.data}</div>` +
+      `<div class="mt-2 text-green-700 font-semibold">🤖 AI 추천 요리: ${data.recipe}</div>` +
       document.getElementById('recipes').innerHTML;
   } catch (err) {
     console.error('❌ AI 추천 오류:', err);
