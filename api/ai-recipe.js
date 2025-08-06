@@ -49,18 +49,27 @@ export default async function handler(req, res) {
             content: `남아있는 재료: ${ingredients.join(', ')}`,
           },
         ],
-        max_tokens: 50, // ✅ 토큰 늘림
-        temperature: 0.7, // ✅ 조금 더 창의적인 제안
+        max_tokens: 50,
+        temperature: 0.7,
       }),
     });
 
     const data = await response.json();
-    console.log('📦 OpenAI 응답:', data);
 
-    // ✅ 응답 파싱 (첫 줄만)
-    const suggestion =
-      (data.choices?.[0]?.message?.content || '').split('\n')[0].trim() ||
-      '추천 불가';
+    // 📌 OpenAI 응답 전체를 Vercel 로그에 출력
+    console.log('📦 OpenAI 응답 데이터:', JSON.stringify(data, null, 2));
+
+    // 📌 응답이 없을 때 이유를 클라이언트로 전달
+    if (!data.choices || !data.choices[0]?.message?.content) {
+      return res.status(200).json({
+        recipe: `추천 불가 (사유: ${data.error?.message || '응답 없음'})`,
+      });
+    }
+
+    // ✅ 첫 줄만 추출
+    const suggestion = (data.choices[0].message.content || '')
+      .split('\n')[0]
+      .trim();
 
     res.status(200).json({ recipe: suggestion });
   } catch (err) {
