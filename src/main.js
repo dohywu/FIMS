@@ -158,14 +158,16 @@ function loadIngredients() {
   onSnapshot(q, (snapshot) => {
     const list = document.getElementById('inventory');
     list.innerHTML = '';
+
     const today = new Date();
     let myIngredients = [];
 
+    // ✅ 냉장/냉동 구분용 배열
+    let coldItems = [];
+    let freezeItems = [];
+
     snapshot.forEach((docSnap) => {
       const item = docSnap.data();
-
-      if (storageFilter && item.storage !== storageFilter) return;
-
       myIngredients.push(item.name);
 
       // ✅ Timestamp 또는 string 모두 처리
@@ -175,10 +177,9 @@ function loadIngredients() {
       } else {
         expiryDate = new Date(item.expiry);
       }
-
       const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
 
-      list.innerHTML += `
+      const itemHTML = `
         <div class="flex items-center justify-between bg-white border p-2 rounded mb-1">
           <div class="flex items-center gap-2">
             <input type="checkbox" class="select-item" data-id="${docSnap.id}">
@@ -212,11 +213,28 @@ function loadIngredients() {
             }')">전체삭제</button>
           </div>
         </div>`;
+
+      if (item.storage === '냉장') {
+        coldItems.push(itemHTML);
+      } else if (item.storage === '냉동') {
+        freezeItems.push(itemHTML);
+      }
     });
+
+    // ✅ 냉장/냉동 구분 출력
+    if (coldItems.length > 0) {
+      list.innerHTML +=
+        `<h3 class="text-lg font-semibold text-blue-600 mt-4 mb-2">❄ 냉장</h3>` +
+        coldItems.join('');
+    }
+    if (freezeItems.length > 0) {
+      list.innerHTML +=
+        `<h3 class="text-lg font-semibold text-indigo-600 mt-4 mb-2">🧊 냉동</h3>` +
+        freezeItems.join('');
+    }
 
     renderRecipes(myIngredients);
 
-    // ✅ 첫 로드에서만 AI 추천 호출
     if (!aiSuggestedOnce && myIngredients.length > 0) {
       aiSuggestedOnce = true;
       getAiRecipeSuggestion(myIngredients);
@@ -333,7 +351,7 @@ document
 
     for (const checkbox of checkedBoxes) {
       const id = checkbox.dataset.id;
-      await deleteDoc(doc(db, currentUser.uid, 'ingredients', id));
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'ingredients', id));
     }
   });
 
