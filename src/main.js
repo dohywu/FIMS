@@ -1,5 +1,5 @@
 console.log('✅ main.js loaded');
-
+import './style.css';
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
@@ -18,9 +18,13 @@ import {
   query,
   orderBy,
   Timestamp,
+  getDoc,
+  updateDoc,
+  getDocs,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-// ✅ Firebase 설정 (.env에서 불러오기)
+// ✅ Firebase 설정 (.env)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -30,31 +34,23 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// 디버그 로그
-if (import.meta.env.VITE_DEBUG === 'true') {
-  console.log('Firebase Config:', firebaseConfig);
-}
-
-let app, auth, db;
+let app, auth, db, functions;
+let currentUser = null;
+let storageFilter = null;
 
 try {
-  // Firebase 초기화
   app = initializeApp(firebaseConfig);
-  console.log('✅ Firebase initialized');
-
   auth = getAuth(app);
   db = getFirestore(app);
+  functions = getFunctions(app);
 } catch (error) {
   console.error('❌ Firebase initialization error:', error);
 }
-
-let currentUser = null;
 
 // 🔹 로그인 버튼
 const loginBtn = document.getElementById('login-btn');
 if (loginBtn) {
   loginBtn.addEventListener('click', async () => {
-    console.log('🔹 Login button clicked');
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
@@ -66,52 +62,15 @@ if (loginBtn) {
 
 // 🔹 로그인 상태 감지
 onAuthStateChanged(auth, (user) => {
-  console.log('📌 Auth state changed:', user);
   if (user) {
-    console.log('✅ User logged in:', user.displayName, user.email);
     currentUser = user;
-    document.getElementById('login-section').innerHTML = `
-      <p>👋 ${user.displayName}님 (${user.email})</p>
-      <button id="logout-btn">로그아웃</button>
-    `;
-
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', async () => {
-        console.log('🔹 Logout button clicked');
-        try {
-          await signOut(auth);
-        } catch (err) {
-          console.error('❌ Logout error:', err);
-        }
-      });
-      console.log('🔹 Logout button event listener added');
-    }
-
     document.getElementById('app').style.display = 'block';
+    document.getElementById('login-section').style.display = 'none';
     loadIngredients();
   } else {
-    console.log('ℹ️ User logged out');
     currentUser = null;
-    document.getElementById(
-      'login-section'
-    ).innerHTML = `<button id="login-btn">Google 로그인</button>`;
-
-    const newLoginBtn = document.getElementById('login-btn');
-    if (newLoginBtn) {
-      newLoginBtn.addEventListener('click', async () => {
-        console.log('🔹 Login button clicked');
-        const provider = new GoogleAuthProvider();
-        try {
-          await signInWithPopup(auth, provider);
-        } catch (err) {
-          console.error('❌ Login error:', err);
-        }
-      });
-      console.log('🔹 Login button event listener added');
-    }
-
     document.getElementById('app').style.display = 'none';
+    document.getElementById('login-section').style.display = 'flex';
   }
 });
 
@@ -129,20 +88,44 @@ function loadIngredients() {
 
     snapshot.forEach((docSnap) => {
       const item = docSnap.data();
+
+      if (storageFilter && item.storage !== storageFilter) return;
+
       myIngredients.push(item.name);
-      const daysLeft = Math.ceil(
-        (item.expiry.toDate() - today) / (1000 * 60 * 60 * 24)
-      );
+
+      // ✅ Timestamp 또는 string 모두 처리
+      let expiryDate;
+      if (item.expiry?.toDate) {
+        expiryDate = item.expiry.toDate();
+      } else {
+        expiryDate = new Date(item.expiry);
+      }
+
+      const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+
       list.innerHTML += `
-        <div class="item">
-          ${item.name} (${item.qty}) - 
-          <span class="${daysLeft <= 3 ? 'expire-soon' : ''}">
-            D${daysLeft >= 0 ? '-' + daysLeft : '+' + Math.abs(daysLeft)}
-          </span>
-          <button onclick="deleteIngredient('${docSnap.id}')">삭제</button>
+        <div class="flex items-center justify-between bg-white border p-2 rounded mb-1">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" class="select-item" data-id="${docSnap.id}">
+            <span>[${item.storage}] ${item.name} (${item.qty}) -
+              <span class="${daysLeft <= 3 ? 'text-red-500 font-bold' : ''}">
+                D${daysLeft >= 0 ? '-' + daysLeft : '+' + Math.abs(daysLeft)}
+              </span>
+            </span>
+          </div>
+          <div class="flex gap-2">
+            <button class="bg-yellow-500 text-white px-2 py-1 rounded text-xs" onclick="deleteIngredient('${
+              docSnap.id
+            }')">삭제</button>
+            <button class="bg-red-600 text-white px-2 py-1 rounded text-xs" onclick="deleteIngredientAll('${
+              docSnap.id
+            }')">전체삭제</button>
+          </div>
         </div>`;
     });
+
     renderRecipes(myIngredients);
+    getAiRecipeSuggestion(myIngredients); // AI 추천 호출
   });
 }
 
@@ -151,13 +134,16 @@ document.getElementById('add-btn').addEventListener('click', async () => {
   const name = document.getElementById('name').value.trim();
   const qty = parseInt(document.getElementById('qty').value);
   const expiry = document.getElementById('expiry').value;
-  if (!name || !qty || !expiry) return alert('모든 칸을 채워주세요.');
+  const storage = document.getElementById('storage').value;
+  if (!name || !qty || !expiry || !storage)
+    return alert('모든 칸을 채워주세요.');
 
   try {
     await addDoc(collection(db, 'users', currentUser.uid, 'ingredients'), {
       name,
       qty,
       expiry: Timestamp.fromDate(new Date(expiry)),
+      storage,
     });
   } catch (err) {
     console.error('❌ Add ingredient error:', err);
@@ -168,16 +154,91 @@ document.getElementById('add-btn').addEventListener('click', async () => {
   document.getElementById('expiry').value = '';
 });
 
-// 🔹 재료 삭제
+// 🔹 재료 삭제 (수량 일부)
 window.deleteIngredient = async (id) => {
   try {
-    await deleteDoc(doc(db, 'users', currentUser.uid, 'ingredients', id));
+    const ingredientRef = doc(db, 'users', currentUser.uid, 'ingredients', id);
+    const ingredientSnap = await getDoc(ingredientRef);
+    if (!ingredientSnap.exists()) {
+      alert('재료를 찾을 수 없습니다.');
+      return;
+    }
+    const data = ingredientSnap.data();
+    if (data.qty > 1) {
+      let toDelete = prompt(
+        `현재 수량: ${data.qty}\n삭제할 수량 입력 (1 ~ ${data.qty}):`,
+        '1'
+      );
+      if (toDelete === null) return;
+      toDelete = parseInt(toDelete, 10);
+      if (isNaN(toDelete) || toDelete < 1)
+        return alert('올바른 수량을 입력하세요.');
+      if (toDelete < data.qty) {
+        await updateDoc(ingredientRef, { qty: data.qty - toDelete });
+      } else {
+        await deleteDoc(ingredientRef);
+      }
+    } else {
+      await deleteDoc(ingredientRef);
+    }
   } catch (err) {
     console.error('❌ Delete ingredient error:', err);
   }
 };
 
-// 🔹 레시피 추천
+// 🔹 재료 전체 삭제 (단일)
+window.deleteIngredientAll = async (id) => {
+  if (!confirm('정말 이 항목을 전부 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db, 'users', currentUser.uid, 'ingredients', id));
+  } catch (err) {
+    console.error('❌ 전체 삭제 error:', err);
+  }
+};
+
+// 🔹 선택 삭제
+document
+  .getElementById('delete-selected-btn')
+  .addEventListener('click', async () => {
+    const checkedBoxes = document.querySelectorAll('.select-item:checked');
+    if (checkedBoxes.length === 0) return alert('선택된 항목이 없습니다.');
+    if (!confirm('선택한 항목을 삭제하시겠습니까?')) return;
+
+    for (const checkbox of checkedBoxes) {
+      const id = checkbox.dataset.id;
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'ingredients', id));
+    }
+  });
+
+// 🔹 전체 삭제 (목록)
+document
+  .getElementById('delete-all-btn')
+  .addEventListener('click', async () => {
+    if (!confirm('목록 전체를 삭제하시겠습니까?')) return;
+    const q = query(collection(db, 'users', currentUser.uid, 'ingredients'));
+    const snap = await getDocs(q);
+    snap.forEach(async (docSnap) => {
+      await deleteDoc(
+        doc(db, 'users', currentUser.uid, 'ingredients', docSnap.id)
+      );
+    });
+  });
+
+// 🔹 필터 버튼
+document.getElementById('filter-all').addEventListener('click', () => {
+  storageFilter = null;
+  loadIngredients();
+});
+document.getElementById('filter-cold').addEventListener('click', () => {
+  storageFilter = '냉장';
+  loadIngredients();
+});
+document.getElementById('filter-freeze').addEventListener('click', () => {
+  storageFilter = '냉동';
+  loadIngredients();
+});
+
+// 🔹 레시피 추천 (기존 하드코딩)
 const recipeDB = [
   { name: '된장찌개', ingredients: ['두부', '감자', '양파'] },
   { name: '계란말이', ingredients: ['계란', '소금', '대파'] },
@@ -198,4 +259,19 @@ function renderRecipes(myIngredients) {
       )})</small></div>`;
     }
   });
+}
+
+// 🔹 AI 요리 추천 (Firebase Functions 호출)
+const aiRecipe = httpsCallable(functions, 'aiRecipeSuggestion');
+
+async function getAiRecipeSuggestion(ingredients) {
+  if (ingredients.length === 0) return;
+  try {
+    const res = await aiRecipe({ ingredients });
+    document.getElementById('recipes').innerHTML =
+      `<div class="mt-2 text-green-700 font-semibold">🤖 AI 추천 요리: ${res.data}</div>` +
+      document.getElementById('recipes').innerHTML;
+  } catch (err) {
+    console.error('❌ AI 추천 오류:', err);
+  }
 }

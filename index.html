@@ -3,27 +3,132 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>냉장고 재고 & 레시피 추천</title>
+    <title>FIMC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body>
-    <h1>🥦 냉장고 재고 관리</h1>
-    <div id="login-section">
-      <button id="login-btn">Google 로그인</button>
-    </div>
+  <body class="bg-gray-100 min-h-screen flex flex-col">
+    <header
+      class="bg-white border-b border-gray-300 px-6 py-4 flex justify-between items-center"
+    >
+      <h1 class="text-gray-800 text-lg font-semibold pl-1 py-1">FIMC</h1>
+    </header>
+    <main class="flex-grow flex items-start justify-center p-6">
+      <div class="max-w-4xl w-full space-y-8">
+        <!-- 로그인 -->
+        <div
+          id="login-section"
+          class="bg-white rounded-md shadow-sm p-6 flex justify-center border border-gray-200"
+        >
+          <button
+            id="login-btn"
+            class="bg-white border border-gray-300 text-gray-700 font-medium px-6 py-3 rounded-md hover:bg-blue-50 hover:border-blue-400 transition focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            Google 로그인
+          </button>
+        </div>
 
-    <div id="app" style="display: none">
-      <h2>재료 등록</h2>
-      <input id="name" placeholder="재료 이름" />
-      <input id="qty" type="number" placeholder="수량" />
-      <input id="expiry" type="date" />
-      <button id="add-btn">추가</button>
+        <!-- 앱 -->
+        <div
+          id="app"
+          style="display: none"
+          class="bg-white rounded-md shadow-sm p-6 space-y-6 border border-gray-200"
+        >
+          <!-- 재료 등록 -->
+          <h2
+            class="text-gray-800 text-xl font-semibold border-b border-gray-300 pb-2"
+          >
+            재료 등록
+          </h2>
+          <div class="flex flex-wrap gap-4">
+            <input
+              id="name"
+              placeholder="재료 이름"
+              class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 text-sm flex-grow min-w-[150px]"
+            />
+            <input
+              id="qty"
+              type="number"
+              placeholder="수량"
+              class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 text-sm w-24"
+            />
+            <input
+              id="expiry"
+              type="date"
+              class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 text-sm"
+            />
+            <select
+              id="storage"
+              class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 text-sm"
+            >
+              <option value="냉장">냉장</option>
+              <option value="냉동">냉동</option>
+            </select>
+            <button
+              id="add-btn"
+              class="bg-white border border-gray-300 text-gray-700 font-medium px-5 py-2 rounded-md hover:bg-blue-50 hover:border-blue-400 transition"
+            >
+              추가
+            </button>
+          </div>
 
-      <h2>재고 목록</h2>
-      <div id="inventory"></div>
+          <!-- 필터 & 삭제 버튼 -->
+          <div class="flex gap-2">
+            <button
+              id="filter-all"
+              class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+            >
+              전체 보기
+            </button>
+            <button
+              id="filter-cold"
+              class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+            >
+              냉장 보기
+            </button>
+            <button
+              id="filter-freeze"
+              class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+            >
+              냉동 보기
+            </button>
+            <button
+              id="delete-selected-btn"
+              class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+            >
+              선택 삭제
+            </button>
+            <button
+              id="delete-all-btn"
+              class="bg-red-700 text-white px-3 py-1 rounded hover:bg-red-800"
+            >
+              전체 삭제
+            </button>
+          </div>
 
-      <h2>레시피 추천</h2>
-      <div id="recipes"></div>
-    </div>
+          <!-- 재고 목록 -->
+          <h2
+            class="text-gray-800 text-xl font-semibold border-b border-gray-300 pb-2"
+          >
+            재고 목록
+          </h2>
+          <div
+            id="inventory"
+            class="bg-gray-50 border border-gray-200 rounded-md p-4 min-h-[100px] text-gray-700 text-sm"
+          ></div>
+
+          <!-- 레시피 추천 -->
+          <h2
+            class="text-gray-800 text-xl font-semibold border-b border-gray-300 pb-2"
+          >
+            레시피 추천
+          </h2>
+          <div
+            id="recipes"
+            class="bg-gray-50 border border-gray-200 rounded-md p-4 min-h-[100px] text-gray-700 text-sm"
+          ></div>
+        </div>
+      </div>
+    </main>
 
     <script type="module" src="/src/main.js"></script>
   </body>
