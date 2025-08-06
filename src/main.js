@@ -266,18 +266,22 @@ async function getAiRecipeSuggestion(ingredients) {
   if (ingredients.length === 0) return;
 
   try {
-    const response = await fetch(
-      'https://fims-eight.vercel.app/api/ai-recipe',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients }),
-      }
-    );
+    const response = await fetch(`${import.meta.env.VITE_API_URL}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredients }),
+    });
 
     const data = await response.json();
+
+    let infoLine = '';
+    if (data.tokens !== undefined && data.remainingFree !== undefined) {
+      infoLine = `<div class="text-xs text-gray-500">📊 이번 요청 토큰: ${data.tokens}개 · 남은 무료 요청: ${data.remainingFree}회</div>`;
+    }
+
     document.getElementById('recipes').innerHTML =
       `<div class="mt-2 text-green-700 font-semibold">🤖 AI 추천 요리: ${data.recipe}</div>` +
+      infoLine +
       document.getElementById('recipes').innerHTML;
   } catch (err) {
     console.error('❌ AI 추천 오류:', err);
