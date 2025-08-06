@@ -7,7 +7,7 @@ function updateAuthUI(user) {
     // 로그인 상태
     loginSection.innerHTML = `
       <div class="flex items-center gap-4">
-        <span class="text-gray-700 text-sm"> Logged in as ${
+        <span class="text-gray-700 text-sm"> Loggined as ${
           user.displayName || '사용자'
         }</span>
         <button id="logout-btn" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition">LOG OUT</button>
@@ -66,7 +66,7 @@ document.getElementById('bulk-add-btn').addEventListener('click', async () => {
       name,
       qty: 1,
       expiry: Timestamp.fromDate(new Date('2000-01-01')), // 기본값
-      storage: 'RF', // 기본 저장 방식
+      storage: '냉장', // 기본 저장 방식
     });
   }
 
@@ -162,7 +162,7 @@ function loadIngredients() {
     const today = new Date();
     let myIngredients = [];
 
-    // ✅ RF/FR 구분용 배열
+    // ✅ 냉장/냉동 구분용 배열
     let coldItems = [];
     let freezeItems = [];
 
@@ -186,12 +186,12 @@ function loadIngredients() {
             <select onchange="changeStorage('${
               docSnap.id
             }', this.value)" class="border rounded px-1 py-0.5 text-xs">
-              <option value="RF" ${
-                item.storage === 'RF' ? 'selected' : ''
-              }>RF</option>
-              <option value="FR" ${
-                item.storage === 'FR' ? 'selected' : ''
-              }>FR</option>
+              <option value="냉장" ${
+                item.storage === '냉장' ? 'selected' : ''
+              }>냉장</option>
+              <option value="냉동" ${
+                item.storage === '냉동' ? 'selected' : ''
+              }>냉동</option>
             </select>
             <span>${item.name} (${item.qty}) -
               <span class="${daysLeft <= 3 ? 'text-red-500 font-bold' : ''}">
@@ -212,22 +212,22 @@ function loadIngredients() {
           </div>
         </div>`;
 
-      if (item.storage === 'RF') {
+      if (item.storage === '냉장') {
         coldItems.push(itemHTML);
-      } else if (item.storage === 'FR') {
+      } else if (item.storage === '냉동') {
         freezeItems.push(itemHTML);
       }
     });
 
-    // ✅ RF/FR 구분 출력
+    // ✅ 냉장/냉동 구분 출력
     if (coldItems.length > 0) {
       list.innerHTML +=
-        `<h3 class="text-lg font-semibold text-blue-600 mt-4 mb-2">❄ RF</h3>` +
+        `<h3 class="text-lg font-semibold text-blue-600 mt-4 mb-2">❄ 냉장</h3>` +
         coldItems.join('');
     }
     if (freezeItems.length > 0) {
       list.innerHTML +=
-        `<h3 class="text-lg font-semibold text-indigo-600 mt-4 mb-2">🧊 FR</h3>` +
+        `<h3 class="text-lg font-semibold text-indigo-600 mt-4 mb-2">🧊 냉동</h3>` +
         freezeItems.join('');
     }
 
@@ -373,11 +373,11 @@ document.getElementById('filter-all').addEventListener('click', () => {
   loadIngredients();
 });
 document.getElementById('filter-cold').addEventListener('click', () => {
-  storageFilter = 'RF';
+  storageFilter = '냉장';
   loadIngredients();
 });
 document.getElementById('filter-freeze').addEventListener('click', () => {
-  storageFilter = 'FR';
+  storageFilter = '냉동';
   loadIngredients();
 });
 

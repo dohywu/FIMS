@@ -23,7 +23,7 @@
             id="login-btn"
             class="bg-white border border-gray-300 text-gray-700 font-medium px-4 py-2 rounded-md hover:bg-blue-50 hover:border-blue-400 transition text-sm"
           >
-            Google 로그인
+            Login with Google
           </button>
         </div>
 
@@ -37,18 +37,18 @@
           <h2
             class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
           >
-            재료 등록
+            ADD ITEM
           </h2>
           <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
             <input
               id="name"
-              placeholder="재료 이름"
+              placeholder="name"
               class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 text-xs col-span-2 sm:col-span-2"
             />
             <input
               id="qty"
               type="number"
-              placeholder="수량"
+              placeholder="qty"
               class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 text-xs"
             />
             <input
@@ -60,14 +60,14 @@
               id="storage"
               class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 text-xs"
             >
-              <option value="냉장">냉장</option>
-              <option value="냉동">냉동</option>
+              <option value="RF">RF</option>
+              <option value="FR">FR</option>
             </select>
             <button
               id="add-btn"
               class="bg-white border border-gray-300 text-gray-700 font-medium px-2 py-1 rounded-md hover:bg-blue-50 hover:border-blue-400 transition text-xs"
             >
-              추가
+              REGISTER
             </button>
           </div>
 
@@ -75,18 +75,18 @@
           <h2
             class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
           >
-            컬리 대량 등록
+            KURLY BULK ADD
           </h2>
           <textarea
             id="bulk-input"
-            placeholder="구매내역 붙여넣기"
+            placeholder="C&P"
             class="w-full border border-gray-300 rounded-md p-1 text-xs text-gray-700 min-h-[80px]"
           ></textarea>
           <button
             id="bulk-add-btn"
-            class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 text-xs"
+            class="bg-purple-500 text-white px-2 py-1 rounded hover:bg-purple-600 text-xs"
           >
-            대량 등록
+            IMPORT
           </button>
 
           <!-- 필터 & 삭제 버튼 -->
@@ -95,31 +95,31 @@
               id="filter-all"
               class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
             >
-              전체
+              ALL
             </button>
             <button
               id="filter-cold"
               class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
             >
-              냉장
+              RF
             </button>
             <button
               id="filter-freeze"
               class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
             >
-              냉동
+              FR
             </button>
             <button
               id="delete-selected-btn"
               class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
             >
-              선택삭
+              DEL-SEL
             </button>
             <button
               id="delete-all-btn"
               class="bg-red-700 text-white px-2 py-1 rounded hover:bg-red-800"
             >
-              전체삭
+              DEL-ALL
             </button>
           </div>
 
@@ -127,7 +127,7 @@
           <h2
             class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
           >
-            재고 목록
+            STK-LIST
           </h2>
           <div
             id="inventory"
@@ -138,7 +138,7 @@
           <h2
             class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
           >
-            레시피 추천
+            RCP-RCM
           </h2>
           <div
             id="recipes"
