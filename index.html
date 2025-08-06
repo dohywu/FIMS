@@ -8,20 +8,20 @@
   </head>
   <body class="bg-gray-100 min-h-screen flex flex-col">
     <header
-      class="bg-white border-b border-gray-300 px-6 py-4 flex justify-between items-center"
+      class="bg-white border-b border-gray-300 px-4 py-2 flex justify-between items-center"
     >
-      <h1 class="text-gray-800 text-lg font-semibold pl-1 py-1">FIMC</h1>
+      <h1 class="text-gray-800 text-lg font-semibold">FIMC</h1>
     </header>
-    <main class="flex-grow flex items-start justify-center p-6">
-      <div class="max-w-4xl w-full space-y-8">
+    <main class="flex-grow flex items-start justify-center p-2">
+      <div class="max-w-full w-full space-y-4">
         <!-- 로그인 -->
         <div
           id="login-section"
-          class="bg-white rounded-md shadow-sm p-6 flex justify-center border border-gray-200"
+          class="bg-white rounded-md shadow-sm p-4 flex justify-center border border-gray-200"
         >
           <button
             id="login-btn"
-            class="bg-white border border-gray-300 text-gray-700 font-medium px-6 py-3 rounded-md hover:bg-blue-50 hover:border-blue-400 transition focus:outline-none focus:ring-2 focus:ring-blue-400"
+            class="bg-white border border-gray-300 text-gray-700 font-medium px-4 py-2 rounded-md hover:bg-blue-50 hover:border-blue-400 transition text-sm"
           >
             Google 로그인
           </button>
@@ -31,41 +31,41 @@
         <div
           id="app"
           style="display: none"
-          class="bg-white rounded-md shadow-sm p-6 space-y-6 border border-gray-200"
+          class="bg-white rounded-md shadow-sm p-4 space-y-4 border border-gray-200"
         >
           <!-- 재료 등록 -->
           <h2
-            class="text-gray-800 text-xl font-semibold border-b border-gray-300 pb-2"
+            class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
           >
             재료 등록
           </h2>
-          <div class="flex flex-wrap gap-4">
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
             <input
               id="name"
               placeholder="재료 이름"
-              class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 text-sm flex-grow min-w-[150px]"
+              class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 text-xs col-span-2 sm:col-span-2"
             />
             <input
               id="qty"
               type="number"
               placeholder="수량"
-              class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 text-sm w-24"
+              class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 text-xs"
             />
             <input
               id="expiry"
               type="date"
-              class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 text-sm"
+              class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 text-xs"
             />
             <select
               id="storage"
-              class="border border-gray-300 rounded-md px-3 py-2 text-gray-700 text-sm"
+              class="border border-gray-300 rounded-md px-2 py-1 text-gray-700 text-xs"
             >
               <option value="냉장">냉장</option>
               <option value="냉동">냉동</option>
             </select>
             <button
               id="add-btn"
-              class="bg-white border border-gray-300 text-gray-700 font-medium px-5 py-2 rounded-md hover:bg-blue-50 hover:border-blue-400 transition"
+              class="bg-white border border-gray-300 text-gray-700 font-medium px-2 py-1 rounded-md hover:bg-blue-50 hover:border-blue-400 transition text-xs"
             >
               추가
             </button>
@@ -73,76 +73,76 @@
 
           <!-- 대량 등록 -->
           <h2
-            class="text-gray-800 text-xacehol-semibold border-b border-gray-300 pb-2"
+            class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
           >
             컬리 대량 등록
           </h2>
           <textarea
             id="bulk-input"
-            placeholder="구매내역을 붙여넣으세요"
-            class="w-full border border-gray-300 rounded-md p-2 text-sm text-gray-700 min-h-[100px]"
+            placeholder="구매내역 붙여넣기"
+            class="w-full border border-gray-300 rounded-md p-1 text-xs text-gray-700 min-h-[80px]"
           ></textarea>
           <button
             id="bulk-add-btn"
-            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 text-xs"
           >
-            컬리 대량 등록
+            대량 등록
           </button>
 
           <!-- 필터 & 삭제 버튼 -->
-          <div class="flex gap-2">
+          <div class="grid grid-cols-5 gap-1 text-xs">
             <button
               id="filter-all"
-              class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+              class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
             >
-              전체 보기
+              전체
             </button>
             <button
               id="filter-cold"
-              class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+              class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
             >
-              냉장 보기
+              냉장
             </button>
             <button
               id="filter-freeze"
-              class="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+              class="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
             >
-              냉동 보기
+              냉동
             </button>
             <button
               id="delete-selected-btn"
-              class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+              class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
             >
-              선택 삭제
+              선택삭
             </button>
             <button
               id="delete-all-btn"
-              class="bg-red-700 text-white px-3 py-1 rounded hover:bg-red-800"
+              class="bg-red-700 text-white px-2 py-1 rounded hover:bg-red-800"
             >
-              전체 삭제
+              전체삭
             </button>
           </div>
 
           <!-- 재고 목록 -->
           <h2
-            class="text-gray-800 text-xl font-semibold border-b border-gray-300 pb-2"
+            class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
           >
             재고 목록
           </h2>
           <div
             id="inventory"
-            class="bg-gray-50 border border-gray-200 rounded-md p-4 min-h-[100px] text-gray-700 text-sm"
+            class="bg-gray-50 border border-gray-200 rounded-md p-2 min-h-[80px] text-gray-700 text-xs"
           ></div>
 
           <!-- 레시피 추천 -->
           <h2
-            class="text-gray-800 text-xl font-semibold border-b border-gray-300 pb-2"
+            class="text-gray-800 text-base font-semibold border-b border-gray-300 pb-1"
           >
             레시피 추천
           </h2>
           <div
             id="recipes"
-            class="bg-gray-50 border border-gray-200 rounded-md p-4 min-h-[100px] text-gray-700 text-sm"
+            class="bg-gray-50 border border-gray-200 rounded-md p-2 min-h-[80px] text-gray-700 text-xs"
           ></div>
         </div>
       </div>

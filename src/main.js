@@ -1,3 +1,44 @@
+/**
+ * 🔹 로그인/로그아웃 UI 업데이트 함수
+ */
+function updateAuthUI(user) {
+  const loginSection = document.getElementById('login-section');
+  if (user) {
+    // 로그인 상태
+    loginSection.innerHTML = `
+      <div class="flex items-center gap-4">
+        <span class="text-gray-700 text-sm">${
+          user.displayName || '사용자'
+        }님</span>
+        <button id="logout-btn" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition">로그아웃</button>
+      </div>
+    `;
+    document
+      .getElementById('logout-btn')
+      .addEventListener('click', async () => {
+        try {
+          await signOut(auth);
+        } catch (err) {
+          console.error('❌ Logout error:', err);
+        }
+      });
+  } else {
+    // 로그아웃 상태
+    loginSection.innerHTML = `
+      <button id="login-btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
+        Google 로그인
+      </button>
+    `;
+    document.getElementById('login-btn').addEventListener('click', async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        console.error('❌ Login error:', err);
+      }
+    });
+  }
+}
 // 🔹 대량 등록
 document.getElementById('bulk-add-btn').addEventListener('click', async () => {
   const rawText = document.getElementById('bulk-input').value;
@@ -96,18 +137,16 @@ if (loginBtn) {
   });
 }
 
-// 🔹 로그인 상태 감지
+// 🔹 로그인 상태 감지 (UI 업데이트 통합)
 onAuthStateChanged(auth, (user) => {
+  currentUser = user;
   if (user) {
-    currentUser = user;
     document.getElementById('app').style.display = 'block';
-    document.getElementById('login-section').style.display = 'none';
-    loadIngredients();
   } else {
-    currentUser = null;
     document.getElementById('app').style.display = 'none';
-    document.getElementById('login-section').style.display = 'flex';
   }
+  updateAuthUI(user);
+  if (user) loadIngredients();
 });
 
 // 🔹 재료 불러오기
@@ -143,13 +182,23 @@ function loadIngredients() {
         <div class="flex items-center justify-between bg-white border p-2 rounded mb-1">
           <div class="flex items-center gap-2">
             <input type="checkbox" class="select-item" data-id="${docSnap.id}">
-            <span>[${item.storage}] ${item.name} (${item.qty}) -
+            <select onchange="changeStorage('${
+              docSnap.id
+            }', this.value)" class="border rounded px-1 py-0.5 text-xs">
+              <option value="냉장" ${
+                item.storage === '냉장' ? 'selected' : ''
+              }>냉장</option>
+              <option value="냉동" ${
+                item.storage === '냉동' ? 'selected' : ''
+              }>냉동</option>
+            </select>
+            <span>${item.name} (${item.qty}) -
               <span class="${daysLeft <= 3 ? 'text-red-500 font-bold' : ''}">
                 D${daysLeft >= 0 ? '-' + daysLeft : '+' + Math.abs(daysLeft)}
               </span>
             </span>
           </div>
-          <div class="flex flex-wrap gap-2 justify-end">
+          <div class="flex flex-wrap gap-2 justify-end items-center">
             <button class="bg-blue-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="editExpiry('${
               docSnap.id
             }', '${
@@ -174,6 +223,17 @@ function loadIngredients() {
     }
   });
 }
+
+// 🔹 storage 변경 처리 함수
+window.changeStorage = async (id, newStorage) => {
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid, 'ingredients', id), {
+      storage: newStorage,
+    });
+  } catch (err) {
+    console.error('❌ 저장 방식 변경 오류:', err);
+  }
+};
 
 // 🔹 유통기한 수정
 window.editExpiry = async (id, currentDate) => {
@@ -273,7 +333,7 @@ document
 
     for (const checkbox of checkedBoxes) {
       const id = checkbox.dataset.id;
-      await deleteDoc(doc(db, 'users', currentUser.uid, 'ingredients', id));
+      await deleteDoc(doc(db, currentUser.uid, 'ingredients', id));
     }
   });
 
