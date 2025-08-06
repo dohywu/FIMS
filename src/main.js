@@ -377,10 +377,10 @@ function loadIngredients() {
             <button class="bg-blue-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="editExpiry('${
               docSnap.id
             }', '${expiryDate.toISOString().split('T')[0]}')">EDIT-EXP</button>
-            <button class="bg-yellow-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="deleteIngredient('${
+            <button class="bg-red-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="deleteIngredient('${
               docSnap.id
             }')">DEL</button>
-            <button class="bg-red-600 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="deleteIngredientAll('${
+            <button class="bg-red-700 text-white px-2 py-1 rounded text-xs whitespace-nowrap" onclick="deleteIngredientAll('${
               docSnap.id
             }')">DEL-ALL</button>
           </div>
