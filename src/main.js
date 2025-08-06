@@ -304,9 +304,10 @@ function loadIngredients() {
     let soonExpiringItems = [];
     soonExpDiv.innerHTML = '<b>⚠ Soon Expiring</b><br>'; // 매번 초기화
 
-    // ✅ RF/FR 구분용 배열
+    // ✅ RF/FR/CC 구분용 배열
     let coldItems = [];
     let freezeItems = [];
+    let ccItems = [];
 
     snapshot.forEach((docSnap) => {
       const item = docSnap.data();
@@ -347,6 +348,9 @@ function loadIngredients() {
               <option value="FR" ${
                 item.storage === 'FR' ? 'selected' : ''
               }>FR</option>
+              <option value="CC" ${
+                item.storage === 'CC' ? 'selected' : ''
+              }>CC</option>
             </select>
             <span>${item.name} (${item.qty}) -
               <span class="${daysLeft <= 3 ? 'text-red-500 font-bold' : ''}">
@@ -371,6 +375,8 @@ function loadIngredients() {
         coldItems.push(itemHTML);
       } else if (item.storage === 'FR') {
         freezeItems.push(itemHTML);
+      } else if (item.storage === 'CC') {
+        ccItems.push(itemHTML);
       }
     });
 
@@ -382,7 +388,7 @@ function loadIngredients() {
       soonExpDiv.innerHTML = '<b>⚠ Soon Expiring</b><br><i>None</i>';
     }
 
-    // ✅ RF/FR 구분 출력
+    // ✅ RF/FR/CC 구분 출력
     if (coldItems.length > 0) {
       list.innerHTML +=
         `<h3 class="text-lg font-semibold text-blue-600 mt-4 mb-2">❄ RF</h3>` +
@@ -392,6 +398,11 @@ function loadIngredients() {
       list.innerHTML +=
         `<h3 class="text-lg font-semibold text-indigo-600 mt-4 mb-2">🧊 FR</h3>` +
         freezeItems.join('');
+    }
+    if (ccItems.length > 0) {
+      list.innerHTML +=
+        `<h3 class="text-lg font-semibold text-orange-600 mt-4 mb-2">🥶 CC</h3>` +
+        ccItems.join('');
     }
 
     renderRecipes(myIngredients);
