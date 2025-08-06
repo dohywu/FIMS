@@ -24,8 +24,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
 
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    return res.status(400).json({ error: 'No ingredients provided' });
+  }
+
   try {
-    const prompt = `다음 재료로 만들 수 있는 한국 요리 제목 5개 이하로 제안해줘. 다른 설명 없이 제목만 말해. 메뉴간에 쉼표를 넣어줘. 재료: ${ingredients.join(
+    const prompt = `다음 재료로 만들 수 있는 한국 요리 제목 1개만 제안해줘. 다른 설명 없이 제목만 말해. 재료: ${ingredients.join(
       ', '
     )}`;
     const inputTokens = Math.ceil(prompt.length / 4); // 한글 토큰 대략 추정 (4~5자/토큰)
@@ -41,7 +45,23 @@ export default async function handler(req, res) {
       }
     );
 
-    const data = await response.json();
+    const text = await response.text();
+    if (!text) {
+      return res.status(200).json({
+        recipe: `추천 불가 (사유: 빈 응답)`,
+      });
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('❌ JSON 파싱 오류. 응답 내용:', text);
+      return res.status(200).json({
+        recipe: `추천 불가 (사유: JSON 파싱 실패)`,
+      });
+    }
+
     console.log('📦 Gemini 응답:', JSON.stringify(data, null, 2));
 
     if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
@@ -58,13 +78,15 @@ export default async function handler(req, res) {
     requestCount++;
     const remainingFree = Math.max(1500 - requestCount, 0);
 
-    res.status(200).json({
+    return res.status(200).json({
       recipe: suggestion,
       tokens: totalTokens,
       remainingFree,
     });
   } catch (err) {
     console.error('❌ Gemini API 호출 오류:', err);
-    res.status(500).json({ error: 'AI 추천 실패', details: err.message });
+    return res
+      .status(500)
+      .json({ error: 'AI 추천 실패', details: err.message });
   }
 }
