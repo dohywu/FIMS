@@ -45,7 +45,16 @@ export default async function handler(req, res) {
       }
     );
 
+    console.log('📡 AI API 상태코드:', response.status);
     const text = await response.text();
+    console.log('📦 AI API 원본 응답:', text);
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        recipe: `추천 불가 (사유: ${text || '응답 없음'})`,
+      });
+    }
+
     if (!text) {
       return res.status(200).json({
         recipe: `추천 불가 (사유: 빈 응답)`,
@@ -59,10 +68,11 @@ export default async function handler(req, res) {
       console.error('❌ JSON 파싱 오류. 응답 내용:', text);
       return res.status(200).json({
         recipe: `추천 불가 (사유: JSON 파싱 실패)`,
+        raw: text,
       });
     }
 
-    console.log('📦 Gemini 응답:', JSON.stringify(data, null, 2));
+    console.log('📦 Gemini 응답 파싱 완료:', JSON.stringify(data, null, 2));
 
     if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
       return res.status(200).json({
