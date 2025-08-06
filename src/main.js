@@ -339,7 +339,19 @@ async function getAiRecipeSuggestion(ingredients) {
       body: JSON.stringify({ ingredients }),
     });
 
-    const data = await response.json();
+    // ✅ 응답이 비었는지 먼저 확인
+    const text = await response.text();
+    if (!text) {
+      throw new Error('서버에서 빈 응답을 받았습니다.');
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('❌ JSON 파싱 오류. 응답 내용:', text);
+      throw new Error('AI 서버 응답 형식이 잘못되었습니다.');
+    }
 
     let infoLine = '';
     if (data.tokens !== undefined && data.remainingFree !== undefined) {
@@ -352,5 +364,8 @@ async function getAiRecipeSuggestion(ingredients) {
       document.getElementById('recipes').innerHTML;
   } catch (err) {
     console.error('❌ AI 추천 오류:', err);
+    document.getElementById(
+      'recipes'
+    ).innerHTML += `<div class="text-red-500">AI 추천 실패: ${err.message}</div>`;
   }
 }
