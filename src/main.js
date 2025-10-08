@@ -489,6 +489,8 @@ function loadIngredients() {
 
       <!-- RIGHT -->
       <div class="inv-right flex flex-wrap gap-2 lg:ml-auto lg:self-center lg:justify-end">
+        <button class="bg-yellow-500 text-white px-3 py-2 rounded text-xs whitespace-nowrap md:min-w-[104px]"
+          onclick="editQuantity('${docSnap.id}', ${item.qty})">EDIT-QTY</button>
         <button class="bg-blue-500 text-white px-3 py-2 rounded text-xs whitespace-nowrap md:min-w-[104px]"
           onclick="editExpiry('${docSnap.id}', '${isoDate}')">EDIT-EXP</button>
         <button class="bg-red-500 text-white px-3 py-2 rounded text-xs whitespace-nowrap md:min-w-[104px]"
@@ -889,14 +891,15 @@ window.forceMergeJson = async function (itemId, json) {
 /* ===============================
    추가/수정/삭제
    =============================== */
-// “YYYY-MM-01” 버튼 → #expiry에 세팅
+// “YYYY-MM-DD” 버튼 → #expiry에 세팅
 const setExpiryBtn = document.getElementById('set-expiry-btn');
 if (setExpiryBtn) {
   setExpiryBtn.addEventListener('click', () => {
     const d = new Date();
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
-    document.getElementById('expiry').value = `${y}-${m}-01`;
+    const day = String(d.getDate()).padStart(2, '0');
+    document.getElementById('expiry').value = `${y}-${m}-${day}`;
   });
 }
 
@@ -1004,6 +1007,24 @@ window.editExpiry = async (id, currentDate) => {
   } catch (err) {
     console.error('❌ Exp edit err:', err);
     showToast(`Expiry edit failed: ${formatError(err)}`, 'error');
+  }
+};
+
+// 수량 수정
+window.editQuantity = async (id, currentQty) => {
+  const newQty = prompt('New Quantity', currentQty);
+  if (!newQty) return;
+  const parsed = parseInt(newQty, 10);
+  if (isNaN(parsed) || parsed < 1) return alert('Invalid quantity.');
+  try {
+    const ref = doc(db, 'users', currentUser.uid, 'ingredients', id);
+    const before = (await getDoc(ref)).data();
+    await updateDoc(ref, { qty: parsed });
+    await saveHistory('EDIT', id, before, { ...before, qty: parsed });
+    alert('Quantity updated.');
+  } catch (err) {
+    console.error('❌ Qty edit err:', err);
+    showToast(`Quantity edit failed: ${formatError(err)}`, 'error');
   }
 };
 
