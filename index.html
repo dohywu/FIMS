@@ -5,6 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FIMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Make section headers inside inventory span all grid columns */
+      #inventory h3 {
+        grid-column: 1 / -1;
+      }
+      /* ===== Responsive desktop layout helpers for inventory cards ===== */
+      #inventory .inv-card {
+        /* fallback if JS adds this wrapper */
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      #inventory .inv-row {
+        /* main row: title/controls */
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      #inventory .inv-left {
+        /* left cluster: checkbox, storage, name, D-day */
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      #inventory .inv-name {
+        /* long names don’t push buttons off-screen */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #inventory .inv-right {
+        /* right cluster: buttons */
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      #inventory .inv-meta {
+        /* id line under main row */
+        font-size: 11px;
+        color: #9ca3af; /* gray-400 */
+      }
+      /* Desktop: keep everything on a single row, buttons pinned right */
+      @media (min-width: 1024px) {
+        #inventory .inv-row {
+          flex-wrap: nowrap;
+        }
+      }
+    </style>
   </head>
   <body class="bg-gray-100 min-h-screen flex flex-col">
     <header
@@ -33,8 +84,10 @@
       id="snackbar-root"
       class="fixed top-3 left-1/2 -translate-x-1/2 z-50 space-y-2"
     ></div>
-    <main class="flex-grow flex items-start justify-center p-2">
-      <div class="max-w-full w-full space-y-4">
+    <main class="flex-grow p-4">
+      <div
+        class="container mx-auto max-w-[1400px] xl:max-w-[1600px] w-full space-y-6"
+      >
         <!-- 로그인 -->
         <div
           id="login-section"
@@ -186,7 +239,7 @@
           </h2>
           <div
             id="inventory"
-            class="bg-gray-50 border border-gray-200 rounded-md p-2 min-h-[80px] text-gray-700 text-xs"
+            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 xl:gap-6 text-gray-700 text-xs"
           ></div>
           <!-- 레시피 추천 -->
           <h2

@@ -202,6 +202,56 @@ try {
   showToast(`Firebase init failed: ${formatError(error)}`, 'error');
 }
 
+// ===============================
+// Responsive frame (모바일=카드, 데스크탑=리스트)
+// ===============================
+function applyResponsiveFrame() {
+  try {
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.classList.remove('flex', 'items-start', 'justify-center');
+      mainEl.classList.add('block', 'w-full', 'p-3', 'md:p-6', 'xl:p-8');
+      mainEl.style.maxWidth = '100%';
+    }
+
+    const outer = document.querySelector('main > div');
+    if (outer) {
+      // stretch to very wide on desktop while still centered
+      outer.classList.add('w-full', 'mx-auto', 'px-3', 'md:px-6', 'xl:px-10');
+      outer.classList.add('max-w-screen-2xl');
+      outer.style.maxWidth = '1536px';
+      outer.style.width = '100%';
+    }
+
+    const appEl = document.getElementById('app');
+    if (appEl) {
+      appEl.classList.add('w-full');
+      appEl.style.maxWidth = 'none';
+    }
+
+    const inv = document.getElementById('inventory');
+    if (inv) {
+      // ✅ 모바일=그리드 카드 / 데스크탑=리스트(divide-y)
+      inv.className = '';
+      inv.classList.add(
+        'grid',
+        'grid-cols-1',
+        'gap-4', // 기본(모바일~md): 카드 그리드
+        'lg:block',
+        'lg:divide-y',
+        'lg:divide-gray-200' // lg~: 리스트
+      );
+      inv.style.width = '100%';
+    }
+  } catch (e) {
+    console.warn('applyResponsiveFrame error:', e);
+  }
+}
+
+// Apply once on load and on resize
+window.addEventListener('resize', applyResponsiveFrame);
+setTimeout(applyResponsiveFrame, 0);
+
 /* ===============================
    공통: 로그인/로그아웃 UI
    =============================== */
@@ -248,6 +298,8 @@ onAuthStateChanged(auth, (user) => {
   document.getElementById('app').style.display = user ? 'block' : 'none';
   updateAuthUI(user);
   if (user) loadIngredients();
+  // Ensure responsive frame expands once app becomes visible
+  applyResponsiveFrame();
 });
 
 /* ===============================
@@ -319,6 +371,11 @@ function loadIngredients() {
   onSnapshot(qRef, (snapshot) => {
     const list = document.getElementById('inventory');
     list.innerHTML = '';
+    // ❌ 덮어쓰기 제거 (applyResponsiveFrame에서 관리)
+    // list.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6';
+
+    // Ensure outer frame is widened whenever list renders
+    applyResponsiveFrame();
 
     // Soon Expiring 섹션(항상 초기화)
     let soonExpDiv = document.getElementById('soon-expiring');
@@ -326,7 +383,7 @@ function loadIngredients() {
       soonExpDiv = document.createElement('div');
       soonExpDiv.id = 'soon-expiring';
       soonExpDiv.className =
-        'mb-4 bg-red-100 border border-red-400 rounded-md p-2';
+        'col-span-full mb-4 bg-red-50 md:bg-red-100 border border-red-300 md:border-red-400 rounded-md p-3 md:p-4';
       list.parentNode.insertBefore(soonExpDiv, list);
     }
     let soonExpiringItems = [];
@@ -346,7 +403,7 @@ function loadIngredients() {
       const item = docSnap.data();
       if (!item?.name) return;
 
-      // 만료일 (defensive: tolerate missing/invalid)
+      // 만료일 처리
       let expiryDate = null;
       if (item.expiry?.toDate) {
         expiryDate = item.expiry.toDate();
@@ -366,7 +423,7 @@ function loadIngredients() {
         daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
       }
 
-      // Soon Expiring(3일 이하 남음) 수집
+      // Soon Expiring(3일 이하 남음)
       if (daysLeft !== 99999 && daysLeft <= 3) {
         soonExpiringItems.push(
           `- ${item.name} (${item.qty}) D${
@@ -377,22 +434,51 @@ function loadIngredients() {
 
       myIngredients.push(item.name);
 
-      // 🔁 아이템 카드 (mobile-first, tidy layout)
       const card = `
-  <div class="bg-white border rounded mb-2 p-3">
-    <!-- Row 1: ID + title (ONLY text on top) -->
-    <div class="min-w-0">
-      <div class="text-[10px] text-gray-400 break-all">ID: ${docSnap.id}</div>
-      <div class="mt-1 text-[15px] leading-tight font-medium text-gray-900 break-words">
-        ${item.name} (${item.qty}) -
-        <button class="${
-          daysLeft <= 3
-            ? 'text-red-500 font-semibold underline'
-            : 'underline text-gray-700'
-        }" onclick="showExpiryDate('${item.name.replace(
-        /'/g,
-        "\\'"
-      )}', '${isoDate}')">
+  <div class="
+    inv-card
+    bg-white border rounded p-3
+    flex flex-col md:flex-row md:items-center md:justify-between gap-3
+    lg:bg-transparent lg:border-0 lg:rounded-none lg:px-0 lg:py-2
+  ">
+    <div class="inv-row flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 w-full">
+      
+      <!-- LEFT -->
+      <div class="inv-left flex items-center gap-2 min-w-0 lg:justify-start">
+        <input type="checkbox" class="select-item mt-1" data-id="${docSnap.id}">
+        <select onchange="changeStorage('${docSnap.id}', this.value)"
+                class="h-8 border rounded px-2 text-xs">
+          <option value="RF" ${
+            item.storage === 'RF' ? 'selected' : ''
+          }>RF</option>
+          <option value="FR" ${
+            item.storage === 'FR' ? 'selected' : ''
+          }>FR</option>
+          <option value="CC" ${
+            item.storage === 'CC' ? 'selected' : ''
+          }>CC</option>
+        </select>
+
+        <div class="min-w-0">
+          <div class="inv-name text-[15px] leading-tight font-medium text-gray-900 break-words">
+            ${item.name} (${item.qty})
+          </div>
+          <div class="inv-meta text-[11px] text-gray-400 break-all">
+            ID: ${docSnap.id}
+          </div>
+        </div>
+
+        <button
+          class="mt-1 inline-block px-2 py-0.5 rounded-full text-[11px] ${
+            daysLeft <= 3
+              ? 'bg-red-100 text-red-700 font-semibold'
+              : 'bg-gray-100 text-gray-700'
+          }"
+          onclick="showExpiryDate('${item.name.replace(
+            /'/g,
+            "\\'"
+          )}', '${isoDate}')"
+        >
           ${
             daysLeft === 99999
               ? 'D—'
@@ -400,39 +486,20 @@ function loadIngredients() {
           }
         </button>
       </div>
-    </div>
 
-    <!-- Row 2: Actions (now BELOW the text) -->
-    <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-      <button class="bg-blue-500 text-white px-3 py-2 rounded whitespace-nowrap"
-        onclick="editExpiry('${docSnap.id}', '${isoDate}')">EDIT-EXP</button>
-      <button class="bg-red-500 text-white px-3 py-2 rounded whitespace-nowrap"
-        onclick="deleteIngredient('${docSnap.id}')">DEL</button>
-      <button class="bg-red-700 text-white px-3 py-2 rounded whitespace-nowrap"
-        onclick="deleteIngredientAll('${docSnap.id}')">DEL-ALL</button>
+      <!-- RIGHT -->
+      <div class="inv-right flex flex-wrap gap-2 lg:ml-auto lg:self-center lg:justify-end">
+        <button class="bg-blue-500 text-white px-3 py-2 rounded text-xs whitespace-nowrap md:min-w-[104px]"
+          onclick="editExpiry('${docSnap.id}', '${isoDate}')">EDIT-EXP</button>
+        <button class="bg-red-500 text-white px-3 py-2 rounded text-xs whitespace-nowrap md:min-w-[104px]"
+          onclick="deleteIngredient('${docSnap.id}')">DEL</button>
+        <button class="bg-red-700 text-white px-3 py-2 rounded text-xs whitespace-nowrap md:min-w-[104px]"
+          onclick="deleteIngredientAll('${docSnap.id}')">DEL-ALL</button>
+      </div>
     </div>
+  </div>`;
 
-    <!-- Row 3: controls (checkbox + storage) -->
-    <div class="mt-3 flex items-center gap-2">
-      <input type="checkbox" class="select-item" data-id="${docSnap.id}">
-      <select onchange="changeStorage('${
-        docSnap.id
-      }', this.value)" class="h-8 border rounded px-2 text-xs">
-        <option value="RF" ${
-          item.storage === 'RF' ? 'selected' : ''
-        }>RF</option>
-        <option value="FR" ${
-          item.storage === 'FR' ? 'selected' : ''
-        }>FR</option>
-        <option value="CC" ${
-          item.storage === 'CC' ? 'selected' : ''
-        }>CC</option>
-      </select>
-    </div>
-  </div>
-`;
-
-      // ✅ 필터 적용: storageFilter가 설정되어 있으면 해당 타입만 렌더링
+      // ✅ 필터 적용
       const type = item.storage || 'RF';
       if (!storageFilter || storageFilter === type) {
         if (type === 'RF') coldItems.push(card);
@@ -447,23 +514,23 @@ function loadIngredients() {
         ? '<b>⚠ Soon Expiring</b><br>' + soonExpiringItems.join('<br>')
         : '<b>⚠ Soon Expiring</b><br><i>None</i>';
 
-    // 목록 출력 (필터 값에 따라 섹션 선택 표시)
+    // 목록 출력 (섹션 헤더 유지)
     if (!storageFilter || storageFilter === 'RF') {
       if (coldItems.length)
         list.innerHTML +=
-          `<h3 class="text-lg font-semibold text-blue-600 mt-4 mb-2">❄ RF</h3>` +
+          `<h3 class="col-span-full text-lg font-semibold text-blue-600 mt-2">❄ RF</h3>` +
           coldItems.join('');
     }
     if (!storageFilter || storageFilter === 'FR') {
       if (freezeItems.length)
         list.innerHTML +=
-          `<h3 class="text-lg font-semibold text-indigo-600 mt-4 mb-2">🧊 FR</h3>` +
+          `<h3 class="col-span-full text-lg font-semibold text-indigo-600 mt-2">🧊 FR</h3>` +
           freezeItems.join('');
     }
     if (!storageFilter || storageFilter === 'CC') {
       if (ccItems.length)
         list.innerHTML +=
-          `<h3 class="text-lg font-semibold text-orange-600 mt-4 mb-2">🥶 CC</h3>` +
+          `<h3 class="col-span-full text-lg font-semibold text-orange-600 mt-2">🥶 CC</h3>` +
           ccItems.join('');
     }
 
@@ -1227,15 +1294,15 @@ document
         nameLine += ` <span class="text-blue-600">${h.qtyChange}</span>`;
 
       historyDiv.innerHTML += `
-        <div class="border-b py-2 text-sm flex items-start justify-between gap-2">
-          <div>
-            <b>[${h.act}]</b> ${nameLine} (${h.user})<br>
-            <small>${h.ts?.toDate ? h.ts.toDate().toLocaleString() : ''}</small>
-          </div>
-          <button class="shrink-0 bg-gray-800 text-white px-2 py-1 rounded text-xs hover:bg-black"
-                  onclick="undoHistory(${idx})">UNDO</button>
+      <div class="border-b py-2 text-sm flex items-start justify-between gap-2">
+        <div>
+          <b>[${h.act}]</b> ${nameLine} (${h.user})<br>
+          <small>${h.ts?.toDate ? h.ts.toDate().toLocaleString() : ''}</small>
         </div>
-      `;
+        <button class="shrink-0 bg-gray-800 text-white px-2 py-1 rounded text-xs hover:bg-black"
+                onclick="undoHistory(${idx})">UNDO</button>
+      </div>
+    `;
       idx++;
     });
   });
@@ -1258,7 +1325,7 @@ window.undoHistory = async function (i) {
     }
 
     if (h.act === 'DEL') {
-      // Original was delete -> undo by restoring beforeData (may be partial in older logs)
+      // Original was delete -> undo by restoring beforeData
       if (!h.beforeData) return alert('No snapshot to restore.');
       await restoreDocMerge(ref, h.beforeData);
       await saveHistory('UNDO(HIS)', h.itemId, null, h.beforeData);
